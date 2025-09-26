@@ -1,0 +1,2847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Google Takeout | Google Chat Viewer</title>
+    <!-- Google Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --google-blue: #1a73e8;
+            --google-grey-50: #f8f9fa;
+            --google-grey-100: #f1f3f4;
+            --google-grey-200: #e8eaed;
+            --google-grey-300: #dadce0;
+            --google-grey-400: #bdc1c6;
+            --google-grey-500: #9aa0a6;
+            --google-grey-600: #80868b;
+            --google-grey-700: #5f6368;
+            --google-grey-800: #3c4043;
+            --google-grey-900: #202124;
+            --chat-bubble-sent: #e3f2fd;
+            --chat-bubble-received: #f5f5f5;
+            --border-radius: 18px;
+            --message-radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--google-grey-50);
+            color: var(--google-grey-900);
+            font-size: 14px;
+            line-height: 1.4;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            max-width: 100vw;
+        }
+
+        /* Header */
+        .app-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: white;
+            border-bottom: 1px solid var(--google-grey-300);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .app-header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 400;
+            color: var(--google-grey-700);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-header .material-icons {
+            font-size: 24px;
+            color: var(--google-blue);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid var(--google-grey-300);
+            display: flex;
+            flex-direction: column;
+            margin-top: 64px;
+            height: calc(100vh - 64px);
+        }
+
+        .sidebar-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--google-grey-200);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .select-directory-btn {
+            background: var(--google-blue);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 24px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .select-directory-btn:hover {
+            background: #1565c0;
+        }
+
+        .select-directory-btn .material-icons {
+            font-size: 20px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: var(--google-grey-100);
+            border-radius: 20px;
+            padding: 8px 16px;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .search-box .material-icons {
+            font-size: 20px;
+            color: var(--google-grey-500);
+        }
+
+        .search-box input {
+            border: none;
+            background: none;
+            outline: none;
+            flex: 1;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .message-search {
+            background: var(--google-grey-50);
+            border: 1px solid var(--google-grey-300);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .message-search input {
+            border: none;
+            background: none;
+            outline: none;
+            flex: 1;
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .message-search .material-icons {
+            font-size: 18px;
+            color: var(--google-grey-500);
+        }
+
+        /* Chat List */
+        .chat-list-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chat-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .chat-section {
+            border-bottom: 1px solid var(--google-grey-100);
+        }
+
+        .section-header {
+            padding: 12px 24px 8px;
+            background: var(--google-grey-50);
+            border-bottom: 1px solid var(--google-grey-100);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--google-grey-700);
+            user-select: none;
+        }
+
+        .section-header:hover {
+            background: var(--google-grey-100);
+        }
+
+        .section-header .material-icons {
+            font-size: 18px;
+            transition: transform 0.2s;
+        }
+
+        .section-header.collapsed .material-icons {
+            transform: rotate(-90deg);
+        }
+
+        .section-count {
+            color: var(--google-grey-500);
+            font-weight: normal;
+            margin-left: auto;
+        }
+
+        .section-content {
+            display: block;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .section-content.collapsed {
+            display: none;
+        }
+
+        .chat-list-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--google-grey-100);
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .chat-list-item:hover {
+            background-color: var(--google-grey-50);
+        }
+
+        .chat-list-item.active {
+            background-color: var(--google-blue);
+            color: white;
+        }
+
+        .chat-list-item.hidden {
+            display: none;
+        }
+
+        .chat-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--google-grey-300);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .options-toggle {
+            background: none;
+            border: none;
+            color: var(--google-grey-500);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            margin-left: auto;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+
+        .chat-list-item:hover .options-toggle {
+            opacity: 1;
+        }
+
+        .options-toggle:hover {
+            background: var(--google-grey-200);
+        }
+
+        .chat-options {
+            position: absolute;
+            top: 100%;
+            left: 24px;
+            right: 24px;
+            background: white;
+            border: 1px solid var(--google-grey-300);
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 100;
+        }
+
+        .chat-options.show {
+            display: block;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .filter-option input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .apply-filters-btn {
+            background: var(--google-blue);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        /* Main Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-top: 64px;
+            height: calc(100vh - 64px);
+            background: var(--google-grey-50);
+        }
+
+        .chat-header {
+            background: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--google-grey-300);
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-header.show {
+            display: flex;
+        }
+
+        .chat-header .message-search {
+            margin-left: auto;
+            margin-bottom: 0;
+            min-width: 280px;
+            max-width: 320px;
+        }
+
+        .chat-header-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--google-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+        }
+
+        .chat-header-info h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--google-grey-900);
+        }
+
+        .chat-header-members {
+            margin-top: 2px;
+            font-size: 13px;
+            color: var(--google-grey-600);
+        }
+
+        .member-count-link {
+            color: var(--google-blue);
+            text-decoration: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .member-count-link:hover {
+            background-color: var(--google-grey-100);
+            text-decoration: none;
+        }
+
+        .member-count-link .material-icons {
+            font-size: 16px;
+        }
+
+        /* Members Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 480px;
+            max-height: 80vh;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--google-grey-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--google-grey-900);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--google-grey-600);
+            transition: background-color 0.2s;
+        }
+
+        .modal-close:hover {
+            background-color: var(--google-grey-100);
+        }
+
+        .modal-body {
+            padding: 16px 24px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--google-grey-100);
+        }
+
+        .member-item:last-child {
+            border-bottom: none;
+        }
+
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--google-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .member-info {
+            flex: 1;
+        }
+
+        .member-name {
+            font-weight: 500;
+            color: var(--google-grey-900);
+            margin-bottom: 2px;
+        }
+
+        .member-email {
+            font-size: 13px;
+            color: var(--google-grey-600);
+        }
+
+        .member-badge {
+            background: var(--google-grey-100);
+            color: var(--google-grey-700);
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        /* Messages */
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 24px;
+            background: var(--google-grey-50);
+        }
+
+        .message {
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            max-width: 100%;
+        }
+
+        .message.own {
+            align-items: flex-end;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .message.own .message-header {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--google-grey-400);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .message-sender {
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--google-grey-800);
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: var(--google-grey-500);
+            margin-left: 4px;
+        }
+
+        .message.own .message-time {
+            margin-left: 0;
+            margin-right: 4px;
+        }
+
+        .message-content {
+            margin-left: 36px;
+            background: white;
+            padding: 12px 16px;
+            border-radius: var(--message-radius);
+            border: 1px solid var(--google-grey-200);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-word;
+            max-width: 70%;
+            overflow-wrap: break-word;
+        }
+
+        .message.own .message-content {
+            margin-left: 0;
+            margin-right: 36px;
+            background: rgb(211, 227, 253);
+            color: var(--google-grey-900);
+            border-color: rgb(211, 227, 253);
+        }
+
+        .message-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .message-content img:hover {
+            transform: scale(1.02);
+        }
+
+        .message-reactions {
+            margin-left: 36px;
+            margin-top: 4px;
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .message.own .message-reactions {
+            margin-left: 0;
+            margin-right: 36px;
+            justify-content: flex-end;
+        }
+
+        .reaction {
+            background: var(--google-grey-100);
+            border: 1px solid var(--google-grey-300);
+            border-radius: 12px;
+            padding: 2px 6px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .search-highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+
+        /* Attachments */
+        .attachment {
+            margin: 8px 0 4px 0;
+            display: inline-block;
+        }
+
+        .attachment-preview {
+            max-width: 250px;
+            max-height: 200px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            object-fit: cover;
+        }
+
+        .attachment-preview:hover {
+            transform: scale(1.02);
+        }
+
+        .attachment-file {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: var(--google-grey-100);
+            border: 1px solid var(--google-grey-300);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            max-width: 200px;
+            margin: 3px 0;
+        }
+
+        .attachment-file:hover {
+            background: var(--google-grey-200);
+        }
+
+        .attachment-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--google-blue);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .attachment-icon.pdf { background: #ea4335; }
+        .attachment-icon.audio { background: #34a853; }
+        .attachment-icon.video { background: #fbbc04; }
+        .attachment-icon.doc { background: #4285f4; }
+        .attachment-icon.archive { background: #9c27b0; }
+
+        .attachment-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .attachment-name {
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--google-grey-900);
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        .attachment-size {
+            font-size: 11px;
+            color: var(--google-grey-600);
+            margin-top: 1px;
+        }
+
+        /* Hyperlinks */
+        .message-content a {
+            color: var(--google-blue);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+            word-break: break-all;
+            overflow-wrap: break-word;
+        }
+
+        .message-content a:hover {
+            border-bottom-color: var(--google-blue);
+        }
+
+        /* Link Preview */
+        .link-preview {
+            border: 1px solid var(--google-grey-300);
+            border-radius: 6px;
+            padding: 0;
+            margin: 6px 0 2px 0;
+            background: var(--google-grey-50);
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            max-width: 100%;
+            max-height: 150px;
+            width: 100%;
+            overflow: hidden;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        .link-preview:hover {
+            background: var(--google-grey-100);
+            border-color: var(--google-grey-400);
+        }
+
+        .link-preview-image {
+            width: 100%;
+            height: 60px;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: var(--google-grey-200);
+        }
+
+        .link-preview-content {
+            padding: 8px;
+        }
+
+        .link-preview-title {
+            font-weight: 500;
+            color: var(--google-grey-900);
+            margin-bottom: 2px;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.2;
+            font-size: 13px;
+        }
+
+        .link-preview-description {
+            font-size: 12px;
+            color: var(--google-grey-600);
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .link-preview-url {
+            font-size: 11px;
+            color: var(--google-grey-500);
+            word-break: break-all;
+            overflow-wrap: break-word;
+            text-transform: lowercase;
+        }
+
+        /* Call notification styles */
+        .call-notification {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--google-grey-100);
+            border: 1px solid var(--google-grey-300);
+            border-radius: 16px;
+            padding: 4px 8px;
+            margin: 2px 0;
+            font-size: 13px;
+            color: var(--google-grey-800);
+        }
+
+        .call-notification .material-icons {
+            font-size: 16px;
+            color: var(--google-green-600);
+        }
+
+        .call-notification.call-missed .material-icons {
+            color: var(--google-red-600);
+        }
+
+        .call-notification .call-text {
+            font-weight: 500;
+        }
+
+        /* Audio Player */
+        .audio-player {
+            background: var(--google-grey-100);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 300px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            user-select: none;
+        }
+
+        .audio-player:hover {
+            background: var(--google-grey-200);
+        }
+
+        .audio-player:active {
+            transform: scale(0.98);
+        }
+
+        .audio-player.playing {
+            background: var(--chat-bubble-sent);
+        }
+
+        .audio-player .play-pause-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--google-blue);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: background-color 0.2s, transform 0.1s;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .audio-player .play-pause-btn:hover {
+            background: #1565c0;
+        }
+
+        .audio-player .play-pause-btn:active {
+            transform: scale(0.95);
+        }
+
+        .audio-player audio {
+            display: none; /* Hide the default audio controls */
+        }
+
+        .audio-player .audio-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .audio-filename {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--google-grey-900);
+        }
+
+        .audio-duration {
+            font-size: 12px;
+            color: var(--google-grey-600);
+        }
+
+        .audio-progress {
+            width: 100%;
+            height: 4px;
+            background: var(--google-grey-300);
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .audio-progress-bar {
+            height: 100%;
+            background: var(--google-blue);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        /* Image Modal */
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            cursor: pointer;
+        }
+
+        .image-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .image-modal .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .image-modal .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Navigation */
+        .chat-navigation {
+            background: white;
+            border: 1px solid var(--google-grey-300);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 16px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--google-grey-700);
+        }
+
+        .nav-info {
+            flex: 1;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-btn {
+            background: var(--google-blue);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .nav-btn:hover {
+            background: #1565c0;
+            color: white;
+            text-decoration: none;
+        }
+
+        .jump-to-message {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .jump-to-message input {
+            border: 1px solid var(--google-grey-300);
+            border-radius: 4px;
+            padding: 4px 8px;
+            width: 80px;
+            font-size: 12px;
+        }
+
+        .jump-to-message button {
+            background: var(--google-grey-200);
+            border: 1px solid var(--google-grey-300);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--google-grey-500);
+            font-style: italic;
+        }
+
+        /* Scrollbar Styling */
+        .chat-list-container::-webkit-scrollbar,
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-list-container::-webkit-scrollbar-track,
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-list-container::-webkit-scrollbar-thumb,
+        .messages-container::-webkit-scrollbar-thumb {
+            background: var(--google-grey-400);
+            border-radius: 3px;
+        }
+
+        .chat-list-container::-webkit-scrollbar-thumb:hover,
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: var(--google-grey-500);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 280px;
+            }
+            
+            .message-content {
+                max-width: 80%;
+            }
+            
+            .attachment-preview {
+                max-width: 200px;
+                max-height: 150px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: row; /* Keep side-by-side on tablet */
+            }
+            
+            .sidebar {
+                width: 250px;
+                min-width: 250px;
+            }
+            
+            .sidebar-header {
+                padding: 12px 16px;
+            }
+            
+            .select-directory-btn {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+            
+            .chat-list-item {
+                padding: 10px 16px;
+            }
+            
+            .messages-container {
+                padding: 12px 16px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+                margin-left: 32px;
+            }
+            
+            .message.own .message-content {
+                margin-right: 32px;
+            }
+            
+            .attachment-preview {
+                max-width: 180px;
+                max-height: 120px;
+            }
+            
+            .attachment-file {
+                max-width: 250px;
+            }
+            
+            .chat-navigation {
+                flex-direction: column;
+                gap: 8px;
+                align-items: stretch;
+            }
+            
+            .nav-controls {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .jump-to-message {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .app-header {
+                padding: 0 16px;
+            }
+            
+            .app-header h1 {
+                font-size: 18px;
+            }
+            
+            .sidebar {
+                width: 200px;
+                min-width: 200px;
+            }
+            
+            .sidebar-header {
+                padding: 8px 12px;
+            }
+            
+            .select-directory-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            
+            .search-box {
+                padding: 6px 12px;
+            }
+            
+            .chat-list-item {
+                padding: 8px 12px;
+            }
+            
+            .chat-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+            
+            .chat-header-avatar {
+                width: 32px;
+                height: 32px;
+            }
+            
+            .message-avatar {
+                width: 24px;
+                height: 24px;
+                font-size: 10px;
+            }
+            
+            .message-content {
+                margin-left: 28px;
+                max-width: 90%;
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            .message.own .message-content {
+                margin-right: 28px;
+            }
+            
+            .message-reactions {
+                margin-left: 28px;
+            }
+            
+            .message.own .message-reactions {
+                margin-right: 28px;
+            }
+            
+            .attachment-preview {
+                max-width: 150px;
+                max-height: 100px;
+            }
+            
+            .attachment-file {
+                max-width: 200px;
+            }
+            
+            .attachment-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
+            }
+            
+            .attachment-name {
+                font-size: 13px;
+            }
+            
+            .attachment-size {
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 40vh;
+                min-height: 250px;
+                margin-top: 64px;
+                border-right: none;
+                border-bottom: 1px solid var(--google-grey-300);
+            }
+            
+            .chat-container {
+                height: 60vh;
+                margin-top: 0;
+            }
+            
+            .messages-container {
+                padding: 8px 12px;
+            }
+            
+            .message-search {
+                margin: 8px 0;
+                min-width: 200px;
+                max-width: 240px;
+            }
+            
+            .chat-header {
+                padding: 12px 16px;
+                gap: 8px;
+            }
+
+            .chat-header .message-search {
+                margin: 0;
+                min-width: 180px;
+                max-width: 200px;
+            }
+            
+            .message-content {
+                margin-left: 24px;
+                max-width: calc(100% - 24px);
+            }
+            
+            .message.own .message-content {
+                margin-right: 24px;
+                margin-left: 0;
+                max-width: calc(100% - 24px);
+            }
+            
+            .attachment-preview {
+                max-width: 120px;
+                max-height: 80px;
+            }
+            
+            .attachment-file {
+                max-width: 100%;
+            }
+            
+            .section-header {
+                padding: 8px 12px;
+            }
+            
+            .chat-options {
+                left: 12px;
+                right: 12px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .app-header h1 {
+                font-size: 16px;
+            }
+            
+            .sidebar {
+                height: 35vh;
+            }
+            
+            .chat-container {
+                height: 65vh;
+            }
+            
+            .message-content {
+                margin-left: 20px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            .message.own .message-content {
+                margin-right: 20px;
+            }
+            
+            .attachment-preview {
+                max-width: 100px;
+                max-height: 60px;
+            }
+        }
+
+        /* Dynamic sidebar toggle for small screens */
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1001;
+            background: var(--google-blue);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            font-family: 'Material Icons';
+        }
+
+        .sidebar-toggle:hover {
+            background: #1565c0;
+            transform: scale(1.05);
+        }
+
+        .sidebar-toggle:active {
+            transform: scale(0.95);
+        }
+
+        /* Show toggle only on small screens */
+        @media (max-width: 1024px) {
+            .sidebar-toggle {
+                display: flex;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar.collapsed {
+                transform: translateY(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .sidebar:not(.collapsed) {
+                transform: translateY(0);
+                transition: transform 0.3s ease;
+            }
+            
+            .chat-container.sidebar-collapsed {
+                height: calc(100vh - 64px);
+            }
+            
+            /* Touch-friendly improvements */
+            .chat-list-item, 
+            .options-toggle,
+            .section-header,
+            .nav-btn,
+            .apply-filters-btn,
+            .attachment-file {
+                min-height: 44px; /* iOS recommended touch target size */
+            }
+            
+            .message-search input,
+            .search-box input,
+            .jump-to-message input {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            .chat-header {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .chat-header .message-search {
+                order: 3;
+                flex-basis: 100%;
+                min-width: unset;
+                max-width: unset;
+                margin-top: 8px;
+            }
+        }
+
+        /* Improved scrolling for mobile */
+        @media (max-width: 768px) {
+            .chat-list-container,
+            .messages-container {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body>
+    <div class="app-header">
+        <h1>
+            <span class="material-icons">chat</span>
+            Google Chat Takeout Viewer
+        </h1>
+    </div>
+
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+        <span class="material-icons">menu</span>
+    </button>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <button id="select-directory" class="select-directory-btn">
+                    <span class="material-icons">folder_open</span>
+                    Select Takeout Directory
+                </button>
+                <div class="search-box">
+                    <span class="material-icons">search</span>
+                    <input type="text" id="chat-search" placeholder="Search chats..." oninput="filterChats()">
+                </div>
+            </div>
+            <div class="chat-list-container">
+                <ul id="chatList" class="chat-list">
+                    <li class="loading">Choose the directory of uncompressed Takeout files</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div id="chat_header" class="chat-header">
+                <div class="chat-header-avatar"></div>
+                <div class="chat-header-info">
+                    <h3 id="chat_title"></h3>
+                    <div class="chat-header-members">
+                        <a id="member_count_link" class="member-count-link" onclick="showMembersModal()">
+                            <span class="material-icons">people</span>
+                            <span id="member_count_text"></span>
+                        </a>
+                    </div>
+                </div>
+                <div class="message-search">
+                    <span class="material-icons">search</span>
+                    <input type="text" id="message-search" placeholder="Search messages..." oninput="searchMessages()">
+                </div>
+            </div>
+            <div id="chat" class="messages-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const chatMetadataEntries = {};
+        const chatMessageFiles = {};
+        const fileCache = {};
+        const imgCache = {};
+        const chatMessageCache = {};
+        let currentUser = null; // Will be determined from takeout data
+        let currentChatId = null; // Track the currently displayed chat
+        let chatGroups = { directMessages: {}, spaces: {} }; // Grouped chats
+        let currentSearchTerm = '';
+        let currentMessageSearch = '';
+
+        const extensionRegex = /\.[0-9a-z]+$/i;
+
+        async function addChatMetadataEntry(itemPath, entry) {
+            const file = await entry.getFile();
+            const text = await file.text();
+            const json = JSON.parse(text);
+
+            const chatId = getDirectoryName(itemPath);
+            chatMetadataEntries[chatId] = {members: json.members};
+            
+            if ("name" in json) {
+                chatMetadataEntries[chatId].name = json.name;
+            }
+            
+            if ("emoji_id" in json) {
+                chatMetadataEntries[chatId].emoji_id = json.emoji_id;
+            }
+
+            // Detect current user (takeout owner) - they appear in all chats
+            if (!currentUser && json.members && json.members.length > 0) {
+                // Find the most common email across all chats to identify the takeout owner
+                detectCurrentUser();
+            }
+
+            // Categorize chat - Only true Spaces (with actual names) should be in spaces
+            // Group Chats should be in Direct Messages regardless of folder structure
+            const isSpace = "name" in json && json.name && json.name !== "Group Chat";
+            const category = isSpace ? 'spaces' : 'directMessages';
+            chatGroups[category][chatId] = true;
+
+            // set up imgCache for this chatId
+            imgCache[chatId] = {};
+        }
+
+        function detectCurrentUser() {
+            // Count email frequencies across all chats to find the takeout owner
+            const emailCounts = {};
+            for (const chatId in chatMetadataEntries) {
+                const members = chatMetadataEntries[chatId].members;
+                if (members) {
+                    members.forEach(member => {
+                        if (member.email) {
+                            emailCounts[member.email] = (emailCounts[member.email] || 0) + 1;
+                        }
+                    });
+                }
+            }
+            
+            // Find the email that appears most frequently (likely the takeout owner)
+            let maxCount = 0;
+            let mostCommonEmail = null;
+            for (const email in emailCounts) {
+                if (emailCounts[email] > maxCount) {
+                    maxCount = emailCounts[email];
+                    mostCommonEmail = email;
+                }
+            }
+            
+            if (mostCommonEmail) {
+                // Find the name associated with this email
+                for (const chatId in chatMetadataEntries) {
+                    const members = chatMetadataEntries[chatId].members;
+                    if (members) {
+                        const user = members.find(member => member.email === mostCommonEmail);
+                        if (user) {
+                            currentUser = {
+                                email: mostCommonEmail,
+                                name: user.name
+                            };
+                            console.log('Detected current user:', currentUser);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        function escapeFilename(filename) {
+            if (!extensionRegex.test(filename)) {
+                // default to jpg. some extensions are missing in messagess.json
+                // but the files exported have .jpg ext
+                filename += ".jpg";
+            }
+            return filename.replace(/[\?:]/g, '_');
+        }
+
+        function convertImageFilename(chatId, filename) {
+            let imgFile = escapeFilename(filename);
+            imgCache[chatId][imgFile] = (imgCache[chatId][imgFile] || 0) + 1;
+
+            if (imgCache[chatId][imgFile] > 1) {
+                let imgIdx = imgCache[chatId][imgFile] - 1;
+                let imgExt = imgFile.substring(imgFile.lastIndexOf('.'));
+                let imgBase = imgFile.substring(0, imgFile.lastIndexOf('.'));
+                imgFile = `${imgBase}(${imgIdx})${imgExt}`;
+            }
+
+            return imgFile;
+        }
+
+        function getDirectoryName(filePath) {
+            const parts = filePath.split('/');
+
+            // Return the second-to-last element
+            if (parts.length < 2) {
+                return ".";
+            }   
+
+            return parts[parts.length - 2].replace(/\s/g, "-");
+        }
+
+        function addChatMessagesEntry(itemPath, entry) {
+            const chatId = getDirectoryName(itemPath);
+            chatMessageFiles[chatId] = entry;
+        }
+
+        function formatTimestamp(timestamp) {
+            if (timestamp == undefined) {
+                return "";
+            }
+
+            // Format is "Thursday, July 14, 2016 at 5:04:34 PM UTC"
+            timestamp = timestamp.replace(' at ', ' ')
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        async function addToFileCache(itemPath, entry) {
+            const chatId = getDirectoryName(itemPath);
+
+            // initialize fileCache for this chatId
+            if (!(chatId in fileCache)) {
+                fileCache[chatId] = {};
+            }
+
+            file = await entry.getFile();
+            fileCache[chatId][entry.name] = file;
+        }
+
+        function getImgSrcPath(chatId, filename) {
+            // Check if the chatId exists in fileCache
+            if (!fileCache[chatId]) {
+                console.warn(`Chat ID ${chatId} not found in fileCache`);
+                return null;
+            }
+            
+            // Check if the filename exists in the chat's file cache
+            const file = fileCache[chatId][filename];
+            if (!file) {
+                console.warn(`File ${filename} not found in fileCache for chat ${chatId}`);
+                return null;
+            }
+            
+            try {
+                return URL.createObjectURL(file);
+            } catch (e) {
+                console.error(`Failed to create object URL for file ${filename} in chat ${chatId}:`, e);
+                return null;
+            }
+        }
+
+        function getChatMembersTitle(chatId) {
+            if (chatMetadataEntries[chatId] == undefined) {
+                return "unknown";
+            }
+
+            const chatData = chatMetadataEntries[chatId];
+            
+            // For spaces, use just the name (emoji will be used as avatar)
+            // But ignore "Group Chat" as a name - treat it as a regular group chat
+            if ("name" in chatData &&  chatData.name !== "Group Chat") {
+                return chatData.name;
+            }
+
+            // For DMs and Group Chats, exclude current user and create CSV of remaining members
+            const members = getChatMembers(chatId);
+            if (currentUser) {
+                const filteredMembers = members.filter(name => name !== currentUser.name);
+                return filteredMembers.length > 0 ? filteredMembers.join(", ") : members.join(", ");
+            }
+            
+            return members.join(", ");
+        }
+
+        function getChatAvatar(chatId) {
+            if (chatMetadataEntries[chatId] == undefined) {
+                return null;
+            }
+
+            const chatData = chatMetadataEntries[chatId];
+            
+            // For spaces, return the emoji if available
+            if ("name" in chatData && chatData.emoji_id) {
+                return chatData.emoji_id;
+            }
+            
+            // For DMs/Group chats, return null (will use initials)
+            return null;
+        }
+
+        function getChatType(chatId) {
+            return chatGroups.spaces[chatId] ? 'space' : 'dm';
+        }
+
+        function getChatMembers(chatId) {
+            if (chatMetadataEntries[chatId] == undefined) {
+                // TODO what the hell?
+                return [];
+            }
+
+            return chatMetadataEntries[chatId].members.map(member => member.name);
+        }
+
+
+        // Helper function to generate avatar initials
+        function getAvatarInitials(name) {
+            return name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
+        }
+
+        // Helper function to generate avatar background color
+        function getAvatarColor(name) {
+            const colors = ['#1a73e8', '#34a853', '#ea4335', '#fbbc04', '#9c27b0', '#ff9800', '#607d8b', '#795548'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        // Member modal functions
+        function showMembersModal() {
+            if (!currentChatId) return;
+            
+            const chatData = chatMetadataEntries[currentChatId];
+            if (!chatData || !chatData.members) return;
+            
+            const chatTitle = getChatMembersTitle(currentChatId);
+            const members = chatData.members;
+            
+            // Update modal title
+            document.getElementById('members_modal_title').textContent = `${chatTitle} (${members.length} member${members.length !== 1 ? 's' : ''})`;
+            
+            // Generate members list
+            const membersList = document.getElementById('members_list');
+            membersList.innerHTML = '';
+            
+            members.forEach(member => {
+                const isOwner = currentUser && member.name === currentUser.name;
+                const memberItem = document.createElement('div');
+                memberItem.className = 'member-item';
+                
+                const avatar = document.createElement('div');
+                avatar.className = 'member-avatar';
+                avatar.textContent = getAvatarInitials(member.name);
+                avatar.style.backgroundColor = getAvatarColor(member.name);
+                
+                const info = document.createElement('div');
+                info.className = 'member-info';
+                
+                const name = document.createElement('div');
+                name.className = 'member-name';
+                name.textContent = member.name;
+                
+                const email = document.createElement('div');
+                email.className = 'member-email';
+                email.textContent = member.email;
+                
+                info.appendChild(name);
+                info.appendChild(email);
+                
+                memberItem.appendChild(avatar);
+                memberItem.appendChild(info);
+                
+                if (isOwner) {
+                    const badge = document.createElement('div');
+                    badge.className = 'member-badge';
+                    badge.textContent = 'You';
+                    memberItem.appendChild(badge);
+                }
+                
+                membersList.appendChild(memberItem);
+            });
+            
+            // Show modal
+            document.getElementById('members_modal').classList.add('show');
+        }
+
+        function closeMembersModal(event) {
+            if (event && event.target !== event.currentTarget && !event.target.closest('.modal-close')) {
+                return;
+            }
+            document.getElementById('members_modal').classList.remove('show');
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeMembersModal();
+            }
+        });
+
+        function showOptsForm(chatId) {
+            const optsDiv = $(`#opts-${chatId}`);
+            optsDiv.toggleClass('show');
+            
+            // Close other open options
+            $('.chat-options').not(optsDiv).removeClass('show');
+        }
+
+        function filterChats() {
+            const searchTerm = $('#chat-search').val().toLowerCase();
+            currentSearchTerm = searchTerm;
+            
+            $('.chat-list-item').each(function() {
+                const chatTitle = $(this).find('.chat-name span').text().toLowerCase();
+                let isVisible = searchTerm === '' || chatTitle.includes(searchTerm);
+                
+                // If not found in title, search in member names
+                if (!isVisible && searchTerm !== '') {
+                    // Extract chat ID from onclick attribute
+                    const onclickAttr = $(this).attr('onclick');
+                    const chatIdMatch = onclickAttr.match(/selectChat\('([^']+)'\)/);
+                    
+                    if (chatIdMatch && chatIdMatch[1]) {
+                        const chatId = chatIdMatch[1];
+                        const chatData = chatMetadataEntries[chatId];
+                        
+                        if (chatData && chatData.members) {
+                            // Search through member names
+                            for (const member of chatData.members) {
+                                if (member.name && member.name.toLowerCase().includes(searchTerm)) {
+                                    isVisible = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                $(this).toggleClass('hidden', !isVisible);
+            });
+            
+            // Update section counts
+            updateSectionCounts();
+        }
+
+        function updateSectionCounts() {
+            $('.chat-section').each(function() {
+                const sectionId = $(this).attr('id');
+                const visibleCount = $(this).find('.chat-list-item:not(.hidden)').length;
+                $(this).find('.section-count').text(`(${visibleCount})`);
+            });
+        }
+
+        function toggleSection(sectionId) {
+            const section = $(`#${sectionId}`);
+            const header = section.find('.section-header');
+            const content = section.find('.section-content');
+            
+            header.toggleClass('collapsed');
+            content.toggleClass('collapsed');
+        }
+
+        function highlightSearchTerms(text, searchTerm) {
+            if (!searchTerm || searchTerm.length < 2) return text;
+            
+            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        function searchMessages() {
+            const searchTerm = $('#message-search').val().toLowerCase();
+            currentMessageSearch = searchTerm;
+            
+            if (!searchTerm) {
+                // Show all messages
+                $('.message').show();
+                $('.message-content').each(function() {
+                    const originalText = $(this).data('original-text') || $(this).html();
+                    $(this).html(originalText);
+                });
+                return;
+            }
+            
+            $('.message').each(function() {
+                const messageContent = $(this).find('.message-content');
+                const originalText = messageContent.data('original-text') || messageContent.html();
+                messageContent.data('original-text', originalText);
+                
+                const textContent = messageContent.text().toLowerCase();
+                const isMatch = textContent.includes(searchTerm);
+                
+                if (isMatch) {
+                    $(this).show();
+                    const highlightedText = highlightSearchTerms(originalText, searchTerm);
+                    messageContent.html(highlightedText);
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+
+        async function showChatList() {
+            await pickDirectory();
+            console.log("Chats loaded")
+
+            const chatList = $('#chatList');
+
+            if (Object.keys(chatMessageFiles).length == 0) {
+                chatList.html(`<li class="loading">No chats found</li>`);
+                return;
+            }
+
+            // Re-detect current user after all metadata is loaded
+            detectCurrentUser();
+
+            chatList.empty();
+            
+            // Group chats by type - ALL non-Space chats go to Direct Messages
+            const directMessages = [];
+            const spaces = [];
+            
+            for (const chatId in chatMessageFiles) {
+                const chatData = {
+                    id: chatId,
+                    title: getChatMembersTitle(chatId),
+                    type: getChatType(chatId),
+                    avatar: getChatAvatar(chatId)
+                };
+                
+                if (chatData.type === 'space') {
+                    spaces.push(chatData);
+                } else {
+                    // All DMs and Group Chats go to Direct Messages
+                    directMessages.push(chatData);
+                }
+            }
+            
+            // Sort chats alphabetically
+            directMessages.sort((a, b) => a.title.localeCompare(b.title));
+            spaces.sort((a, b) => a.title.localeCompare(b.title));
+            
+            // Create Direct Messages section
+            if (directMessages.length > 0) {
+                const dmSection = $(`
+                    <li class="chat-section" id="dm-section">
+                        <div class="section-header" onclick="toggleSection('dm-section')">
+                            <span class="material-icons">expand_more</span>
+                            Direct Messages
+                            <span class="section-count">(${directMessages.length})</span>
+                        </div>
+                        <ul class="section-content"></ul>
+                    </li>
+                `);
+                
+                const dmContent = dmSection.find('.section-content');
+                directMessages.forEach(chat => {
+                    const listItem = createChatListItem(chat);
+                    dmContent.append(listItem);
+                });
+                
+                chatList.append(dmSection);
+            }
+            
+            // Create Spaces section
+            if (spaces.length > 0) {
+                const spacesSection = $(`
+                    <li class="chat-section" id="spaces-section">
+                        <div class="section-header" onclick="toggleSection('spaces-section')">
+                            <span class="material-icons">expand_more</span>
+                            Spaces
+                            <span class="section-count">(${spaces.length})</span>
+                        </div>
+                        <ul class="section-content"></ul>
+                    </li>
+                `);
+                
+                const spacesContent = spacesSection.find('.section-content');
+                spaces.forEach(chat => {
+                    const listItem = createChatListItem(chat);
+                    spacesContent.append(listItem);
+                });
+                
+                chatList.append(spacesSection);
+            }
+        }
+        
+        function createChatListItem(chat) {
+            const initials = getAvatarInitials(chat.title);
+            const avatarColor = getAvatarColor(chat.title);
+            
+            // For spaces with emoji, use the emoji as avatar, otherwise use initials
+            const avatarContent = chat.avatar ? 
+                `<span style="font-size: 18px;">${chat.avatar}</span>` : 
+                initials;
+            const avatarStyle = chat.avatar ? 
+                'background: var(--google-grey-200); color: inherit;' : 
+                `background-color: ${avatarColor}`;
+            
+            return $(`
+                <li class="chat-list-item" onclick="selectChat('${chat.id}')">
+                    <div class="chat-name">
+                        <div class="chat-avatar" style="${avatarStyle}">
+                            ${avatarContent}
+                        </div>
+                        <span>${chat.title}</span>
+                        <button class="options-toggle" onclick="event.stopPropagation(); showOptsForm('${chat.id}')" title="Options">
+                            <span class="material-icons">more_vert</span>
+                        </button>
+                    </div>
+                    
+                    <div class="chat-options" id="opts-${chat.id}">
+                        <form id="opts-form-${chat.id}" onsubmit="event.preventDefault(); readAndDisplayJsonFile('${chat.id}')">
+                            <div class="filter-option">
+                                <input type="checkbox" id="imagesOnly-${chat.id}" name="imagesOnly">
+                                <label for="imagesOnly-${chat.id}">Images Only</label>
+                            </div>
+                            ${getChatMembers(chat.id).map(member => `
+                                <div class="filter-option">
+                                    <input type="checkbox" data-exclude-name="${member}" name="exclude">
+                                    <label>Hide ${member} messages</label>
+                                </div>
+                            `).join('')}
+                            <button type="submit" class="apply-filters-btn">Apply Filters</button>
+                        </form>
+                    </div>
+                </li>
+            `);
+        }
+
+        function selectChat(chatId) {
+            // Remove active class from all chat items
+            $('.chat-list-item').removeClass('active');
+            
+            // Add active class to selected chat
+            $(event.currentTarget).addClass('active');
+            
+            // Load the chat
+            readAndDisplayJsonFile(chatId);
+        }
+
+        function preprocessImages(chatId, msgsJson) {
+            for (const msg of msgsJson.messages) {
+                if (!("attached_files" in msg)) {
+                    continue;
+                }
+                for (const file of msg.attached_files) {
+                    // console.log("image file before: ", file);
+                    const imgFile = convertImageFilename(chatId, file.export_name);
+                    // console.log("converted filename: ", imgFile);
+                    file.export_name = imgFile;
+                }
+            }
+
+            return msgsJson;
+        }
+
+        async function pickDirectory() {
+            const chatList = $('#chatList');
+            try {
+                const directoryHandle = await window.showDirectoryPicker({startIn: "downloads"});
+                $('#chat').empty();
+                $('#chat_header').removeClass('show');
+                chatList.html(`<li class="loading">Loading chats...</li>`);
+                await listFilesRecursive(directoryHandle, chatList);
+            } catch (err) {
+                console.error(`Error: ${err}`);
+                chatList.html(`<li class="loading">Error: ${err.message}</li>`);
+            }
+        }
+
+        async function listFilesRecursive(directoryHandle, chatList, prefix = '') {
+            console.log("Looking for chats in ", directoryHandle.name);
+            for await (const entry of directoryHandle.values()) {
+                const itemPath = `${prefix}${entry.name}`;
+                // console.log("processing ", itemPath);
+                if (entry.kind === 'file') {
+                    if (entry.name.endsWith('messages.json')) {
+                        addChatMessagesEntry(itemPath, entry);
+                    } else if (entry.name.endsWith('group_info.json')) {
+                        addChatMetadataEntry(itemPath, entry);
+                    } else {
+                        await addToFileCache(itemPath, entry);
+                    }
+                } else if (entry.kind === 'directory') {
+                    if (entry.name.startsWith('.') || entry.name === 'Users') {
+                        continue;
+                    }
+                    await listFilesRecursive(entry, chatList, itemPath + '/');
+                }
+            }
+        }
+        
+        async function goToMessage(chatId) {
+            const messageNum = $(`#goToMessage`).val().replace(/,/g, '');
+            let i = parseInt(messageNum);
+
+            if (isNaN(i)) {
+                alert("Unfortunately not a number: " + messageNum);
+                return;
+            } else if (i < 1) {
+                i = 0;
+            }
+
+            await readAndDisplayJsonFile(chatId, {start: i - 1});
+        }
+
+        async function readAndDisplayJsonFile(chatId, opts = {}) {
+            if (!(chatId in chatMessageCache)) {
+                console.log(`Reading and parsing ${chatId} messages.json`);
+                const entry = chatMessageFiles[chatId];
+                
+                // Update current chat ID
+                currentChatId = chatId;
+                
+                // Update chat header
+                const chatTitle = getChatMembersTitle(chatId);
+                const chatAvatar = getChatAvatar(chatId);
+                
+                $('#chat_title').text(chatTitle);
+                
+                // Update member count
+                const chatData = chatMetadataEntries[chatId];
+                if (chatData && chatData.members) {
+                    const memberCount = chatData.members.length;
+                    $('#member_count_text').text(`${memberCount} member${memberCount !== 1 ? 's' : ''}`);
+                    $('#member_count_link').show();
+                } else {
+                    $('#member_count_link').hide();
+                }
+                
+                const headerAvatar = $('#chat_header .chat-header-avatar');
+                if (chatAvatar) {
+                    // For spaces with emoji, use the emoji
+                    headerAvatar.html(`<span style="font-size: 24px;">${chatAvatar}</span>`)
+                               .css('background-color', 'var(--google-grey-200)')
+                               .css('color', 'inherit');
+                } else {
+                    // For DMs/Group chats, use initials with color
+                    headerAvatar.text(getAvatarInitials(chatTitle))
+                               .css('background-color', getAvatarColor(chatTitle))
+                               .css('color', 'white');
+                }
+                
+                $('#chat_header').addClass('show');
+    
+                const chatBox = $('#chat');
+                chatBox.html('<div class="loading">Loading messages...</div>');
+    
+                const file = await entry.getFile();
+                const text = await file.text();
+                chatMessageCache[chatId] = preprocessImages(chatId, JSON.parse(text));
+            }
+
+            window.scrollTo(0, 0);
+            const chatBox = $('#chat');
+            chatBox.empty();
+
+            const json = chatMessageCache[chatId];
+            const max = Math.min(5000, json.messages.length);
+
+            const imagesOnly = $('#imagesOnly-' + chatId).is(':checked');
+
+            let excludeSenders = {};
+            for (const member of getChatMembers(chatId)) {
+                if ($(`#opts-form-${chatId} input[data-exclude-name="${member}"]`).is(':checked')) {
+                    excludeSenders[member] = true;
+                }
+            }
+
+            let start = ("start" in opts) ? opts.start : 0;
+
+            if (start >= json.messages.length) {
+                start = json.messages.length - max;
+            }
+
+            const end = Math.min(start + max, json.messages.length);
+
+            console.log(`Displaying ${max} messages from ${start} to ${json.messages.length}`);
+            
+            // Add navigation if needed
+            if (json.messages.length > max && start >= 0) {
+                const navItem = $(`
+                    <div class="chat-navigation">
+                        <div class="nav-info">
+                            Showing messages ${(start + 1).toLocaleString("en")} to ${end.toLocaleString("en")} of ${json.messages.length.toLocaleString("en")}
+                        </div>
+                        <div class="nav-controls">
+                            ${start > 0 ? `<a href="#" class="nav-btn" onclick="readAndDisplayJsonFile('${chatId}', {start: ${Math.max(0, start - max)}})">Previous</a>` : ''}
+                            ${end < json.messages.length ? `<a href="#" class="nav-btn" onclick="readAndDisplayJsonFile('${chatId}', {start: ${end}})">Next</a>` : ''}
+                            <div class="jump-to-message">
+                                Jump to: <input type="text" id="goToMessage" placeholder="1234">
+                                <button onclick="goToMessage('${chatId}')">Go</button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                chatBox.append(navItem);
+
+                $("#goToMessage").on('keyup', function (e) {
+                    if (e.key === 'Enter' || e.keyCode === 13) {
+                        goToMessage(chatId);
+                    }
+                });
+            }
+
+            // Display messages
+            for (let i = start; i < end; i++) {
+                const msg = json.messages[i];
+                
+                if (msg.creator.name in excludeSenders) {
+                    continue;
+                }
+                if (imagesOnly && !("attached_files" in msg)) {
+                    continue;
+                }
+
+                const senderName = msg.creator.name;
+                const actingUserName = msg.creator.acting_user ? msg.creator.acting_user.name : null;
+                const displayName = actingUserName ? `${senderName}(via ${actingUserName})` : senderName;
+                const senderInitials = getAvatarInitials(senderName);
+                const senderColor = getAvatarColor(senderName);
+                const timestamp = formatTimestamp(msg.created_date);
+                
+                // Check if this message is from the current user (takeout owner)
+                const isOwnMessage = currentUser && (
+                    msg.creator.email === currentUser.email || 
+                    msg.creator.name === currentUser.name
+                );
+
+                let messageContent = '';
+                if ("text" in msg) {
+                    messageContent = processMessageText(msg.text.trim(), msg.annotations);
+                }else{
+                    messageContent = processMessageText('', msg.annotations);
+                }
+
+                let attachments = '';
+                if ("attached_files" in msg) {
+                    for (const file of msg.attached_files) {
+                        attachments += renderAttachment(file, chatId);
+                    }
+                }
+
+                let reactions = '';
+                if ("reactions" in msg) {
+                    for (const reaction of msg.reactions) {
+                        reactions += `<div class="reaction" title="${reaction.reactor_emails}">${reaction.emoji.unicode}</div>`;
+                    }
+                }
+
+                const messageDiv = $(`
+                    <div class="message${isOwnMessage ? ' own' : ''}">
+                        <div class="message-header">
+                            <div class="message-avatar" style="background-color: ${senderColor}">
+                                ${senderInitials}
+                            </div>
+                            <span class="message-sender">${displayName}</span>
+                            <span class="message-time">${timestamp}</span>
+                        </div>
+                        <div class="message-content">${messageContent}${attachments}</div>
+                        ${reactions ? `<div class="message-reactions">${reactions}</div>` : ''}
+                    </div>
+                `);
+
+                chatBox.append(messageDiv);
+            }
+
+            // Add bottom navigation if needed
+            if (end < json.messages.length) {
+                const bottomNavItem = $(`
+                    <div class="chat-navigation">
+                        <div class="nav-controls">
+                            <a href="#" class="nav-btn" onclick="readAndDisplayJsonFile('${chatId}', {start: ${end}})">
+                                Load More Messages (${(json.messages.length - end).toLocaleString("en")} remaining)
+                            </a>
+                        </div>
+                    </div>
+                `);
+                chatBox.append(bottomNavItem);
+            }
+            
+            // Apply current message search if any
+            if (currentMessageSearch) {
+                $('#message-search').val(currentMessageSearch);
+                searchMessages();
+            }
+            
+            // Scroll to bottom (most recent messages) when opening a chat
+            setTimeout(() => {
+                const messagesContainer = $('#chat');
+                if (messagesContainer.length) {
+                    messagesContainer[0].scrollTop = messagesContainer[0].scrollHeight;
+                }
+            }, 100); // Small delay to ensure DOM is updated
+        }
+
+        // Message text processing functions
+        function processMessageText(text, annotations) {
+            // if (!text) return '';
+            
+            let processedText = text;
+            let linkPreviews = '';
+            
+            // Debug: log annotations to understand what we're receiving
+            if (annotations && annotations.length > 0) {
+                console.log('Processing annotations for text:', text);
+                console.log('Annotations:', annotations);
+            }
+            
+            // Process annotations first (Google Chat's structured links)
+            if (annotations && annotations.length > 0) {
+                // Sort annotations by start_index in descending order to avoid index shifting
+                const sortedAnnotations = [...annotations].sort((a, b) => b.start_index - a.start_index);
+                
+                for (const annotation of sortedAnnotations) {
+                    console.log('Processing annotation:', annotation);
+                    console.log('Annotation keys:', Object.keys(annotation));
+                    
+                    if (annotation.url_metadata) {
+                        const startIndex = annotation.start_index;
+                        const length = annotation.length;
+                        const endIndex = startIndex + length;
+                        
+                        // Extract the text to be linked
+                        const linkText = text.substring(startIndex, endIndex);
+                        
+                        // Get the URL from the annotation
+                        const url = annotation.url_metadata.url?.private_do_not_access_or_else_safe_url_wrapped_value || '';
+                        
+                        if (url && linkText) {
+                            // Replace the text with a proper link
+                            const beforeText = processedText.substring(0, startIndex);
+                            const afterText = processedText.substring(endIndex);
+                            const linkedText = `<a href="${url}" target="_blank" rel="noopener noreferrer" title="${annotation.url_metadata.title || url}">${linkText}</a>`;
+                            
+                            processedText = beforeText + linkedText + afterText;
+                            
+                            // Create link preview if we have metadata
+                            if (annotation.url_metadata.title) {
+                                linkPreviews += createLinkPreview(annotation.url_metadata, url);
+                            }
+                        }
+                    } else if (annotation.gsuite_integration_metadata) {
+                        // Handle Google Meet call annotations
+                        console.log('Found gsuite_integration_metadata:', annotation.gsuite_integration_metadata);
+                        
+                        const startIndex = annotation.start_index;
+                        const length = annotation.length;
+                        const endIndex = startIndex + length;
+                        
+                        // Extract the original text
+                        const originalText = text.substring(startIndex, endIndex);
+                        console.log('Original call text:', originalText);
+                        
+                        // Get call data
+                        const callData = annotation.gsuite_integration_metadata.call_data;
+                        console.log('Call data:', callData);
+                        
+                        if (callData) {
+                            const beforeText = processedText.substring(0, startIndex);
+                            const afterText = processedText.substring(endIndex);
+                            
+                            // Create call notification
+                            const callNotification = createCallNotification(callData, originalText);
+                            console.log('Generated call notification:', callNotification);
+                            processedText =  beforeText + callNotification + afterText;
+                        }
+                    }
+                }
+            }
+            
+            // Then process any remaining plain URLs that weren't in annotations
+            const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
+            processedText = processedText.replace(urlRegex, (url) => {
+                // Check if this URL is already wrapped in a link tag
+                const beforeUrl = processedText.substring(0, processedText.indexOf(url));
+                if (beforeUrl.endsWith('<a href="')) {
+                    return url; // Skip if already processed by annotations
+                }
+                
+                const cleanUrl = url.replace(/[.,!?;:]$/, ''); // Remove trailing punctuation
+                const displayUrl = cleanUrl.length > 50 ? cleanUrl.substring(0, 47) + '...' : cleanUrl;
+                return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" title="${cleanUrl}">${displayUrl}</a>`;
+            });
+            
+            return processedText + linkPreviews;
+        }
+
+        function createLinkPreview(urlMetadata, url) {
+            const title = urlMetadata.title || 'Link';
+            const snippet = urlMetadata.snippet || '';
+            const imageUrl = urlMetadata.image_url || '';
+            
+            // Create a clean domain name for display
+            let domain = '';
+            try {
+                domain = new URL(url).hostname.replace('www.', '');
+            } catch (e) {
+                domain = url;
+            }
+            
+            return `
+                <div class="link-preview" onclick="window.open('${url}', '_blank')" title="Open ${title}">
+                    ${imageUrl ? `<div class="link-preview-image" style="background-image: url('${imageUrl}');"></div>` : ''}
+                    <div class="link-preview-content">
+                        <div class="link-preview-title">${title}</div>
+                        ${snippet ? `<div class="link-preview-description">${snippet}</div>` : ''}
+                        <div class="link-preview-url">${domain}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createCallNotification(callData, originalText) {
+            const callStatus = callData.call_status || 'UNKNOWN';
+            const callDuration = callData.call_duration_seconds;
+            
+            let statusIcon = 'call';
+            let statusText = originalText; // Fallback to original text
+            let statusClass = 'call-notification';
+            
+            switch (callStatus) {
+                case 'CALL_ENDED':
+                    statusIcon = 'call_end';
+                    statusText = 'Call ended';
+                    if (callDuration) {
+                        const minutes = Math.floor(callDuration / 60);
+                        const seconds = callDuration % 60;
+                        const durationText = minutes > 0 ? 
+                            `${minutes}m ${seconds}s` : 
+                            `${seconds}s`;
+                        statusText += ` • ${durationText}`;
+                    }
+                    break;
+                case 'CALL_STARTED':
+                    statusIcon = 'phone_in_talk';
+                    statusText = 'Call started';
+                    break;
+                case 'CALL_MISSED':
+                    statusIcon = 'call_received';
+                    statusText = 'Missed call';
+                    statusClass += ' call-missed';
+                    break;
+                default:
+                    statusText = originalText;
+            }
+            
+            return `
+                <div class="${statusClass}">
+                    <span class="material-icons">${statusIcon}</span>
+                    <span class="call-text">${statusText}</span>
+                </div>
+            `;
+        }
+
+        // Audio player functions
+        function toggleAudioPlayback(audioId) {
+            const audio = document.getElementById(audioId);
+            const player = document.querySelector(`[data-audio-id="${audioId}"]`);
+            const playButton = player.querySelector('.play-pause-btn .material-icons');
+            
+            if (!audio || !player || !playButton) return;
+            
+            if (audio.paused) {
+                // Pause all other audio players first
+                pauseAllAudio();
+                
+                audio.play();
+                playButton.textContent = 'pause';
+                player.classList.add('playing');
+            } else {
+                audio.pause();
+                playButton.textContent = 'play_arrow';
+                player.classList.remove('playing');
+            }
+        }
+
+        function pauseAllAudio() {
+            document.querySelectorAll('.audio-player audio').forEach(audio => {
+                if (!audio.paused) {
+                    audio.pause();
+                    const audioId = audio.id;
+                    const player = document.querySelector(`[data-audio-id="${audioId}"]`);
+                    const playButton = player.querySelector('.play-pause-btn .material-icons');
+                    if (playButton) {
+                        playButton.textContent = 'play_arrow';
+                        player.classList.remove('playing');
+                    }
+                }
+            });
+        }
+
+        function updateAudioDuration(audioId) {
+            const audio = document.getElementById(audioId);
+            const player = document.querySelector(`[data-audio-id="${audioId}"]`);
+            
+            if (!audio || !player) return;
+            
+            const durationElement = player.querySelector('.audio-duration');
+            if (durationElement && !isNaN(audio.duration)) {
+                const duration = formatTime(audio.duration);
+                // Keep file size if it's already there, or show duration
+                if (!durationElement.textContent.includes('MB') && !durationElement.textContent.includes('KB')) {
+                    durationElement.textContent = duration;
+                }
+            }
+        }
+
+        function updateAudioProgress(audioId) {
+            const audio = document.getElementById(audioId);
+            const player = document.querySelector(`[data-audio-id="${audioId}"]`);
+            
+            if (!audio || !player) return;
+            
+            const progressBar = player.querySelector('.audio-progress-bar');
+            if (progressBar && !isNaN(audio.duration) && audio.duration > 0) {
+                const progress = (audio.currentTime / audio.duration) * 100;
+                progressBar.style.width = `${progress}%`;
+            }
+        }
+
+        function audioEnded(audioId) {
+            const player = document.querySelector(`[data-audio-id="${audioId}"]`);
+            const playButton = player.querySelector('.play-pause-btn .material-icons');
+            
+            if (playButton) {
+                playButton.textContent = 'play_arrow';
+                player.classList.remove('playing');
+            }
+            
+            // Reset progress bar
+            const progressBar = player.querySelector('.audio-progress-bar');
+            if (progressBar) {
+                progressBar.style.width = '0%';
+            }
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Attachment handling functions
+        function getFileType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            
+            const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+            const audioTypes = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'];
+            const videoTypes = ['mp4', 'webm', 'avi', 'mov', 'mkv', 'wmv'];
+            const documentTypes = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
+            const archiveTypes = ['zip', 'rar', '7z', 'tar', 'gz'];
+            
+            if (imageTypes.includes(ext)) return 'image';
+            if (audioTypes.includes(ext)) return 'audio';
+            if (videoTypes.includes(ext)) return 'video';
+            if (documentTypes.includes(ext)) return 'document';
+            if (archiveTypes.includes(ext)) return 'archive';
+            
+            return 'file';
+        }
+
+        function getFileIcon(fileType) {
+            const icons = {
+                'image': 'image',
+                'audio': 'audiotrack',
+                'video': 'videocam',
+                'document': 'description',
+                'archive': 'folder_zip',
+                'file': 'insert_drive_file'
+            };
+            return icons[fileType] || 'insert_drive_file';
+        }
+
+        function getFileIconClass(fileType) {
+            const classes = {
+                'document': 'pdf',
+                'audio': 'audio',
+                'video': 'video',
+                'archive': 'archive',
+                'file': 'doc'
+            };
+            return classes[fileType] || 'doc';
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '';
+            
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function openImageModal(imageSrc) {
+            $('#modalImage').attr('src', imageSrc);
+            $('#imageModal').addClass('show');
+            $('body').css('overflow', 'hidden'); // Prevent background scrolling
+            
+            // On mobile, make sure modal image is properly sized
+            const windowWidth = $(window).width();
+            if (windowWidth <= 480) {
+                $('#modalImage').css({
+                    'max-width': '95%',
+                    'max-height': '85%'
+                });
+            } else {
+                $('#modalImage').css({
+                    'max-width': '90%',
+                    'max-height': '90%'
+                });
+            }
+        }
+
+        function closeImageModal() {
+            $('#imageModal').removeClass('show');
+            $('body').css('overflow', 'auto'); // Restore scrolling
+        }
+
+        function renderAttachment(file, chatId) {
+            const fileSrc = getImgSrcPath(chatId, file.export_name);
+            const fileType = getFileType(file.export_name);
+            
+            // If file source is null (file not found), show an error placeholder
+            if (!fileSrc) {
+                return `
+                    <div class="attachment-file">
+                        <div class="attachment-icon" style="background: #ea4335;">
+                            <span class="material-icons">error</span>
+                        </div>
+                        <div class="attachment-info">
+                            <div class="attachment-name">${file.export_name}</div>
+                            <div class="attachment-size" style="color: #ea4335;">File not found</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (fileType === 'image') {
+                return `
+                    <div class="attachment">
+                        <img src="${fileSrc}" 
+                             alt="${file.export_name}" 
+                             class="attachment-preview" 
+                             onclick="openImageModal('${fileSrc}')"
+                             title="Click to view full size">
+                    </div>
+                `;
+            } else if (fileType === 'audio') {
+                const fileSize = formatFileSize(file.file_size);
+                const audioId = `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                return `
+                    <div class="audio-player" onclick="toggleAudioPlayback('${audioId}')" data-audio-id="${audioId}">
+                        <div class="play-pause-btn">
+                            <span class="material-icons">play_arrow</span>
+                        </div>
+                        <div class="audio-info">
+                            <div class="audio-filename">${file.export_name}</div>
+                            <div class="audio-duration">${fileSize || 'Audio'}</div>
+                            <div class="audio-progress">
+                                <div class="audio-progress-bar"></div>
+                            </div>
+                        </div>
+                        <audio id="${audioId}" preload="metadata" onloadedmetadata="updateAudioDuration('${audioId}')" ontimeupdate="updateAudioProgress('${audioId}')" onended="audioEnded('${audioId}')">
+                            <source src="${fileSrc}" type="audio/mpeg">
+                            <source src="${fileSrc}" type="audio/wav">
+                            <source src="${fileSrc}" type="audio/ogg">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
+                `;
+            } else {
+                const icon = getFileIcon(fileType);
+                const iconClass = getFileIconClass(fileType);
+                const fileSize = formatFileSize(file.file_size);
+                
+                return `
+                    <div class="attachment-file" onclick="window.open('${fileSrc}', '_blank')" title="Open ${file.export_name}">
+                        <div class="attachment-icon ${iconClass}">
+                            <span class="material-icons">${icon}</span>
+                        </div>
+                        <div class="attachment-info">
+                            <div class="attachment-name">${file.export_name}</div>
+                            ${fileSize ? `<div class="attachment-size">${fileSize}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Responsive behavior functions
+        let isSidebarCollapsed = false;
+
+        function toggleSidebar() {
+            const sidebar = $('.sidebar');
+            const chatContainer = $('.chat-container');
+            const toggleIcon = $('#sidebarToggle .material-icons');
+            
+            isSidebarCollapsed = !isSidebarCollapsed;
+            
+            if (isSidebarCollapsed) {
+                sidebar.addClass('collapsed');
+                chatContainer.addClass('sidebar-collapsed');
+                toggleIcon.text('chat');
+            } else {
+                sidebar.removeClass('collapsed');
+                chatContainer.removeClass('sidebar-collapsed');
+                toggleIcon.text('menu');
+            }
+        }
+
+        function handleWindowResize() {
+            const windowWidth = $(window).width();
+            
+            // Auto-show/hide sidebar toggle based on screen size
+            if (windowWidth <= 480) {
+                $('#sidebarToggle').show();
+            } else {
+                // Always show sidebar on larger screens
+                if (isSidebarCollapsed) {
+                    toggleSidebar(); // Un-collapse
+                }
+                $('#sidebarToggle').hide();
+                $('.sidebar').removeClass('collapsed');
+                $('.chat-container').removeClass('sidebar-collapsed');
+                isSidebarCollapsed = false;
+            }
+            
+            // Adjust message content widths dynamically
+            updateMessageWidths();
+            
+            // Adjust attachment sizes based on available space
+            updateAttachmentSizes();
+            
+            // Update section counts in case layout changed
+            if (typeof updateSectionCounts === 'function') {
+                updateSectionCounts();
+            }
+        }
+
+        function updateMessageWidths() {
+            const windowWidth = $(window).width();
+            let maxWidth = '70%';
+            
+            if (windowWidth <= 480) {
+                maxWidth = 'calc(100% - 24px)';
+            } else if (windowWidth <= 600) {
+                maxWidth = '90%';
+            } else if (windowWidth <= 768) {
+                maxWidth = '85%';
+            } else if (windowWidth <= 1024) {
+                maxWidth = '80%';
+            }
+            
+            $('.message-content').css('max-width', maxWidth);
+        }
+
+        function updateAttachmentSizes() {
+            const windowWidth = $(window).width();
+            let previewMaxWidth = '250px';
+            let previewMaxHeight = '200px';
+            let fileMaxWidth = '300px';
+            
+            if (windowWidth <= 320) {
+                previewMaxWidth = '100px';
+                previewMaxHeight = '60px';
+                fileMaxWidth = '100%';
+            } else if (windowWidth <= 480) {
+                previewMaxWidth = '120px';
+                previewMaxHeight = '80px';
+                fileMaxWidth = '100%';
+            } else if (windowWidth <= 600) {
+                previewMaxWidth = '150px';
+                previewMaxHeight = '100px';
+                fileMaxWidth = '200px';
+            } else if (windowWidth <= 768) {
+                previewMaxWidth = '180px';
+                previewMaxHeight = '120px';
+                fileMaxWidth = '250px';
+            } else if (windowWidth <= 1024) {
+                previewMaxWidth = '200px';
+                previewMaxHeight = '150px';
+                fileMaxWidth = '280px';
+            }
+            
+            $('.attachment-preview').css({
+                'max-width': previewMaxWidth,
+                'max-height': previewMaxHeight
+            });
+            
+            $('.attachment-file').css('max-width', fileMaxWidth);
+        }
+
+        // Debounce function to limit how often resize handler runs
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        $(document).ready(function() {
+            $('#select-directory').click(showChatList);
+            
+            // Add keyboard support for modal
+            $(document).keydown(function(e) {
+                if (e.key === 'Escape' && $('#imageModal').hasClass('show')) {
+                    closeImageModal();
+                }
+            });
+            
+            // Handle window resize with debouncing
+            const debouncedResize = debounce(handleWindowResize, 250);
+            $(window).on('resize', debouncedResize);
+            
+            // Initial responsive setup
+            handleWindowResize();
+        });
+    </script>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <button class="close-btn" onclick="closeImageModal()">
+            <span class="material-icons">close</span>
+        </button>
+        <img id="modalImage" src="" alt="Full size image">
+    </div>
+    <!-- Members Modal -->
+    <div id="members_modal" class="modal-overlay" onclick="closeMembersModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="members_modal_title">Chat Members</h3>
+                <button class="modal-close" onclick="closeMembersModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="members_list"></div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
